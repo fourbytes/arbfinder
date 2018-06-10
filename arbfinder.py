@@ -105,13 +105,12 @@ if __name__ == "__main__":
             filter(lambda a: a.market1.exchange == SRC,
                    arb_opportunities))
 
-    print(f"{PURPLE}{BOLD}Best Arbitrage Opportunities {END}")
     for arb in sorted(f_arb_opportunities, key=lambda a: a.diff_pct, reverse=True)[:7]:
         print(f"{BOLD}{arb.pair} +{round(arb.diff_pct * 100, 2)}%{END}")
         m1color = RED if arb.market1.last > arb.market2.last else GREEN
         m2color = GREEN if arb.market1.last > arb.market2.last else RED
-        print(f"{m1color} {arb.market1.exchange} : last: {format_btc(arb.market1.last)} | vol: {round(arb.market1.volume, 2)}BTC {END}")
-        print(f"{m2color} {arb.market2.exchange} : last: {format_btc(arb.market2.last)} | vol: {round(arb.market2.volume, 2)}BTC {END}")
+        print(f"{m1color} + {arb.market1.exchange}: last: {format_btc(arb.market1.last)} (vol {round(arb.market1.volume, 2)}BTC){END}")
+        print(f"{m2color} - {arb.market2.exchange}: last: {format_btc(arb.market2.last)} (vol {round(arb.market2.volume, 2)}BTC){END}")
 
     lowest = sorted(arb_opportunities, key=lambda a: a.diff_pct)
     lowest = filter(lambda y: y.pair.asset in TRANSFER_CURRENCIES and y.pair.base == 'BTC', lowest)

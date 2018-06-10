@@ -5,7 +5,7 @@ Pull requests and improvements are welcome.
 
 #### Usage
 ```bash
-# 1. Configure API keys in config.py (as per utils.py).
+# First configure API keys in config.py (as per utils.py).
 $ source .envrc
 $ python arbfinder.py
 ```
