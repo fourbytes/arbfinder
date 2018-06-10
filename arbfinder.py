@@ -12,7 +12,7 @@ from utils import (
 
 log = logging.getLogger(__name__)
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 MIN_VOLUME = 30
 BASE_CURRENCIES = ['BTC', 'ETH']
