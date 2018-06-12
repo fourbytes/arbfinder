@@ -104,31 +104,11 @@ for market in binance_markets:
     ))
 
 
-#arb_opportunities = []
-#for pair in markets_pairs:
-#    if len(pair) < 2:
-#        log.debug(f'length of markets too low: {pair}')
-#        continue
-#    if pair[0].pair.base not in BASE_CURRENCIES:
-#        log.debug(f'base not in BASE_CURRENCIES: {pair[0].pair.base}')
-#        continue
-#
-#    price_sorted = sorted(pair, key=lambda x: x.last)
-#    market1 = price_sorted[0]
-#    market2 = price_sorted[-1]
-#
-#    if market1.volume < MIN_VOLUME or market2.volume < MIN_VOLUME:
-#        log.debug(f'volume too low: {market1.volume} | {market2.volume}')
-#        continue
-#
-#    diff = abs(market1.last - market2.last)
-#    diff_pct = diff / max(market1.last, market2.last)
-#
-#    arb_opportunities.append(ArbitrageOpportunity(market1, market2, diff_pct))
-
 if __name__ == "__main__":
     arbs = []
     for pm in pair_markets.values():
+        if pm.pair.base not in BASE_CURRENCIES:
+            continue
         arb = pm.get_best_arbitrage()
         if arb:
             arbs.append(arb)

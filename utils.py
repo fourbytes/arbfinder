@@ -16,6 +16,19 @@ PURPLE = '\033[35m'
 END = '\033[0m'
 
 
+def format_market(market, show='last'):
+    if market.pair.base == 'BTC':
+        format_base = format_btc
+    elif market.pair.base in ('USDT', 'USD'):
+        format_base = lambda v: f"{market.pair.base}${round(v, 2)}"
+    else:
+        format_base = lambda v: f"{v:.8f}{market.pair.base}"
+
+    p = f'{show}: {format_base(getattr(market, show))}'
+
+    return f"{market.exchange}: {p} (vol {format_base(round(market.volume, 2))}, spread {format_base(market.spread)})"
+
+
 class NotEnoughMarketsException(Exception):
     pass
 
@@ -62,11 +75,18 @@ class Market(object):
     def __init__(self, pair: Pair, bid: float,
                  ask: float, last: float, volume: float, exchange: str,
                  wallet_active: bool = True):
+        if pair.base == 'ETH':
+            round_to = 8
+        elif pair.base in ('USD', 'USDT'):
+            round_to = 2
+        else:
+            round_to = 8
         self.pair = pair
-        self.bid = bid
-        self.ask = ask
-        self.last = last
-        self.volume = volume
+        self.bid = round(bid, round_to)
+        self.ask = round(ask, round_to)
+        self.spread = round(abs(self.bid - self.ask), round_to)
+        self.last = round(last, round_to)
+        self.volume = round(volume, round_to)
         self.exchange = exchange
         self.wallet_active = wallet_active
 
@@ -95,8 +115,8 @@ class PairMarkets(object):
         sell_market = markets_by_price[-1]
         mid_markets = markets_by_price[1:-1] if len(markets_by_price) >= 3 else []
         
-        diff = abs(buy_market.ask - sell_market.bid)
-        diff_pct = diff / abs((buy_market.ask + sell_market.bid) / 2)
+        diff = abs(buy_market.last - sell_market.last)
+        diff_pct = diff / abs((buy_market.last + sell_market.last) / 2)
         
         # Returns: tuple(Market<buy>, Market<sell>)
         return ArbitrageOpportunity(buy_market, sell_market, mid_markets, diff_pct)
@@ -115,24 +135,17 @@ class ArbitrageOpportunity(object):
         return self.buy_market.pair
 
     def print(self):
-        if self.pair.base == 'BTC':
-            format_base = format_btc
-        elif self.pair.base in ('USDT', 'USD'):
-            format_base = lambda v: f"{self.pair.base}${round(v, 2)}"
-        else:
-            format_base = lambda v: f"{v}{self.pair.base}"
-
         # Header
         print(f"{BOLD}{self.pair} +{round(self.diff_pct * 100, 2)}%{END}")
 
         # Buy Market
-        print(f" {GREEN}+ {self.buy_market.exchange}: ask: {format_base(self.buy_market.ask)} (vol {format_base(round(self.buy_market.volume, 2))}){END}")
+        print(f" {GREEN}+ {format_market(self.buy_market, 'last')}{END}")
         
         for m in self.mid_markets:
-            print(f" * {m.exchange}: ask: {format_base(m.ask)} (vol {format_base(round(m.volume, 2))}){END}")
+            print(f" * {format_market(m)}{END}")
 
         # Sell Market
-        print(f" {RED}- {self.sell_market.exchange}: bid: {format_base(self.sell_market.bid)} (vol {format_base(round(self.sell_market.volume, 2))}){END}")
+        print(f" {RED}- {format_market(self.sell_market, 'last')}{END}")
 
 
 def format_btc(price):
