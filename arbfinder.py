@@ -1,6 +1,7 @@
 import logging
 from itertools import groupby
 
+import requests
 from icecream import ic
 
 from utils import (
@@ -14,15 +15,34 @@ log = logging.getLogger(__name__)
 
 logging.basicConfig(level=logging.INFO)
 
-MIN_VOLUME = 20
+MIN_VOLUME = 5
 BASE_CURRENCIES = ['BTC', 'ETH']
 TRANSFER_CURRENCIES = ['DOGE', 'LTC', 'ETH', 'DASH', 'BITB', 'XMR', 'ZEC', 'XRP', 'NEO']
 
 markets = []
 
+try:
+    tradeogre_data = requests.get('https://tradeogre.com/api/v1/markets').json()
+except e:
+    logging.exception('Error retrieving markets from tradeogre.')
+else:
+    for market in tradeogre_data:
+        pair, market_data = list(market.items())[0]
+        base, asset = pair.split('-')
+
+        markets.append(Market(
+            Pair(base, asset),
+            bid=float(market_data['bid']),
+            ask=float(market_data['ask']),
+            last=float(market_data['price']),
+            volume=float(market_data['volume']),
+            exchange='tradeogre'
+        ))
+
 cryptopia_markets = cryptopia.request('GetMarkets').json()['Data']
 for market in cryptopia_markets:
-    asset, base = market['Label'].split('/')
+    elements = market['Label'].split('/')
+    asset, base = '/'.join(elements[:-1]), elements[-1]
     markets.append(Market(
         Pair(base, asset),
         market['BidPrice'],
@@ -52,21 +72,21 @@ for market in binance_markets:
         base = market['symbol'][-3:]
     asset = market['symbol'][:-3]
 
-    bidPrice = float(market['bidPrice'])
-    askPrice = float(market['askPrice'])
+    bid_price = float(market['bidPrice'])
+    ask_price = float(market['askPrice'])
 
-    avgPrice = (bidPrice + askPrice) / 2
+    avg_price = (bid_price + ask_price) / 2
 
-    bidQty = float(market['bidQty'])
-    askQty = float(market['askQty'])
-    baseQty = (((bidQty + askQty) / 2) * avgPrice) * 100
+    bid_qty = float(market['bidQty'])
+    ask_qty = float(market['askQty'])
+    base_qty = (((bid_qty + ask_qty) / 2) * avg_price) * 100
 
     markets.append(Market(
         Pair(base, asset),
-        bidPrice,
-        askPrice,
-        avgPrice,
-        baseQty,
+        bid_price,
+        ask_price,
+        avg_price,
+        base_qty,
         'binance'
     ))
 
@@ -99,7 +119,7 @@ for pair in markets_pairs:
 
 if __name__ == "__main__":
     f_arb_opportunities = arb_opportunities
-    SRC = 0#"bittrex"  #"bittrex"
+    SRC = None # "bittrex"  #"bittrex"
     if SRC:
         f_arb_opportunities = list(
             filter(lambda a: a.market1.exchange == SRC,
@@ -112,11 +132,11 @@ if __name__ == "__main__":
         print(f" {m1color}+ {arb.market1.exchange}: last: {format_btc(arb.market1.last)} (vol {round(arb.market1.volume, 2)}BTC){END}")
         print(f" {m2color}- {arb.market2.exchange}: last: {format_btc(arb.market2.last)} (vol {round(arb.market2.volume, 2)}BTC){END}")
 
-    lowest = sorted(arb_opportunities, key=lambda a: a.diff_pct)
-    lowest = filter(lambda y: y.pair.asset in TRANSFER_CURRENCIES and y.pair.base == 'BTC', lowest)
+    lowest_b = sorted(arb_opportunities, key=lambda a: a.diff_pct)
+    lowest = filter(lambda y: y.pair.asset in TRANSFER_CURRENCIES and y.pair.base == 'BTC', lowest_b)
 
     print()
-    print('-')
+    print(f'-: {len(lowest_b)}')
     print()
     for arb in list(lowest)[:3]:
         print(f"{BOLD}{arb.pair.asset} {round(arb.diff_pct * 100, 2)}%{END}")

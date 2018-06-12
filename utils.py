@@ -24,11 +24,14 @@ class Pair(object):
     def ab(self):
         return sorted([self.base, self.asset])
 
-    def matches(self, pair):
-        if self.base == pair.base:
-            return self.asset == pair.asset
-        elif self.base == pair.asset:
-            return self.asset == pair.base
+    #def matches(self, pair):
+    #    if self.base == pair.base:
+    #        return self.asset == pair.asset
+    #    elif self.base == pair.asset:
+    #        return self.asset == pair.base
+
+    def __eq__(self, op):
+        return op.base == self.base and op.asset == self.asset
 
     def __repr__(self):
         return f'Pair<{self.__str__()}>'
@@ -37,8 +40,20 @@ class Pair(object):
         return f'{self.base}/{self.asset}'
 
 
+class Exchange(object):
+    def __init__(self, name):
+        self.name = name
+        self.markets = []
+
+    def get_by_pair(self, pair):
+        for m in markets:
+            if m.pair == pair:
+                return m
+
+
 class Market(object):
-    def __init__(self, pair, bid, ask, last, volume, exchange):
+    def __init__(self, pair: Pair, bid: float,
+                 ask: float, last: float, volume: float, exchange: str):
         self.pair = pair
         self.bid = bid
         self.ask = ask
