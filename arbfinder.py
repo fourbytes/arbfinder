@@ -49,6 +49,7 @@ else:
         ))
 
 cryptopia_markets = cryptopia.request('GetMarkets').json()['Data']
+cryptopia.get_active_wallets()
 for market in cryptopia_markets:
     elements = market['Label'].split('/')
     asset, base = '/'.join(elements[:-1]), elements[-1]

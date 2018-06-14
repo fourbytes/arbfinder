@@ -3,7 +3,21 @@ from bitex import Bittrex, Cryptopia, Binance
 from config import CRYPTOPIA_API_KEY, CRYPTOPIA_API_SECRET, BITTREX_API_KEY, BITTREX_API_SECRET
 
 
-cryptopia = Cryptopia(key=CRYPTOPIA_API_KEY, secret=CRYPTOPIA_API_SECRET)
+class CryptopiaCustom(Cryptopia):
+    def get_active_wallets(self):
+        if getattr(self, 'cached_active_wallets', None):
+            return self.cached_active_wallets
+        active_wallets = []
+        res = cryptopia.request('GetCurrencies').json()
+        if not res['Success']:
+            logging.error('Failed to retrieve wallet stats from cryptopia.')
+        for coin in res['Data']:
+            if coin['Status'] == 'OK':
+                active_wallets.append(coin['Symbol'])
+        self.cached_active_wallets = active_wallets
+        return active_wallets
+
+cryptopia = CryptopiaCustom(key=CRYPTOPIA_API_KEY, secret=CRYPTOPIA_API_SECRET)
 binance = Binance()
 bittrex = Bittrex(key=BITTREX_API_KEY, secret=BITTREX_API_SECRET)
 
@@ -25,8 +39,15 @@ def format_market(market, show='last'):
         format_base = lambda v: f"{v:.8f}{market.pair.base}"
 
     p = f'{show}: {format_base(getattr(market, show))}'
+    suffix = ''
 
-    return f"{market.exchange}: {p} (vol {format_base(round(market.volume, 2))}, spread {format_base(market.spread)})"
+    if market.exchange == 'cryptopia':
+        active_wallets = cryptopia.get_active_wallets()
+        if market.pair.asset not in active_wallets or \
+           market.pair.base not in active_wallets:
+            suffix = f' * wallet not OK *'
+
+    return f"{market.exchange}: {p} (vol {format_base(round(market.volume, 2))}, spread {format_base(market.spread)}){suffix}"
 
 
 class NotEnoughMarketsException(Exception):
@@ -91,7 +112,7 @@ class Market(object):
         self.wallet_active = wallet_active
 
     def get_ticker(self):
-        return f"{self.exchange}:{self.get_pair()}"
+        return f"{self.exchange}:{self.pair}"
 
     def __repr__(self):
         return f'Market<{repr(self.pair)} Exchange<{self.exchange}>>'
@@ -151,4 +172,4 @@ class ArbitrageOpportunity(object):
 def format_btc(price):
     if price < 0.001:
         return f"{round(price/0.00000001)}sats"
-    return f"{round(price, 4)}BTC"
+    return f"{round(price, 8)}BTC"
