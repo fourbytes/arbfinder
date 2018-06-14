@@ -1,3 +1,5 @@
+#!/bin/python
+
 import logging
 from itertools import groupby
 
